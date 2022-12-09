@@ -5,13 +5,27 @@ pragma solidity ^0.8.7;
 //yarn add --dev @chainlink/contracts
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 
+error RandomIpfsNft__RangeOutOfBounds();
+
+//Plan:
 //when we mint an NFT, we will trigger a Chainlink VRF call to get us a random number
 //using that number we will get a random NFT, which can be a Pug (super rare), Shiba Inu (rare), St.Bernard (common)
 //users have to pay to mint an NFT
 //the owner of the contract can withdraw the ETH
 
-contract RandomIpfsNft is VRFConsumerBaseV2 {
+contract RandomIpfsNft is VRFConsumerBaseV2, ERC721URIStorage {
+    //when we add a new inherited contract, remember to look at its constructor to add it to our constructor
+
+    //Type Declaration
+    enum Breed {
+        PUG,
+        SHIBA_INU,
+        ST_BERNARD
+    }
+
+    //variables for the vrf request.
     VRFCoordinatorV2Interface private immutable i_vrfCoordinator;
     uint64 private immutable i_subscriptionId;
     bytes32 private immutable i_gasLane;
@@ -19,16 +33,27 @@ contract RandomIpfsNft is VRFConsumerBaseV2 {
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
 
+    // VRF Helpers
+    mapping(uint256 => address) public s_requestIdToSender; //we should make it private but we'll make it public
+
+    // NFT Variables
+    uint256 public s_tokenCounter; //again we're just making it public to make it easy, we should make it private with a get
+    uint256 internal constant MAX_CHANCE_VALUE = 100;
+    string[] internal s_dogTokenUris;
+
     constructor(
         address vrfCoordinatorV2,
         uint64 subscriptionId,
         bytes32 gasLane,
-        uint32 callbackGasLimit
-    ) VRFConsumerBaseV2(vrfCoordinatorV2) {
+        uint32 callbackGasLimit,
+        string[3] memory dogTokenUris
+    ) VRFConsumerBaseV2(vrfCoordinatorV2) ERC721("Random IPFS NFT", "RIN") {
+        //even tho we are inheriting ERC721URIStorage,we initiate ERC721 in the constructor bcuz ERC721URIStorage is inheriting ERC721 which is the one that needs to be initiated.
         i_vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinatorV2);
         i_subscriptionId = subscriptionId;
         i_gasLane = gasLane;
         i_callbackGasLimit = callbackGasLimit;
+        s_dogTokenUris = dogTokenUris;
     }
 
     function requestNft() public returns (uint256 requestId) {
@@ -39,12 +64,53 @@ contract RandomIpfsNft is VRFConsumerBaseV2 {
             i_callbackGasLimit,
             NUM_WORDS
         );
+        s_requestIdToSender[requestId] = msg.sender;
+        //the thing here is that fulfillRandomWords() will be where the nfts will be minted, so we have to have a way to know the address of who's calling requestNft().
+        //we'll do that with a mapping of requestId -> address, so that in fulfillRandomWords() when it receives a requestId, we can query the address of who requested it.
     }
 
     function fulfillRandomWords(
+        //just to remember myself from the last time I used vrf, we call the coordinator, which will end up calling a function on our inherited contract, that will verify that
+        //its the coordinator that is calling it (thats why we add the coordinator address in its constructor), and that function from the inherited will be the one calling
+        //this fulfillRandomWords() thats why this is internal, and this way there's no way for someone to sneak a fake random number
         uint256 requestId,
         uint256[] memory randomWords
-    ) internal override {}
+    ) internal override {
+        address dogOwner = s_requestIdToSender[requestId];
+        uint256 newTokenId = s_tokenCounter;
 
-    function tokenURI(uint256) public {}
+        uint256 moddedRng = randomWords[0] % MAX_CHANCE_VALUE;
+        //this will produce a number between 0-99, so since it includes the 0, the 10% should be between 0-9, the 30% should be 10-39, and 60% between 40-99
+
+        Breed dogBreed = getBreedFromModdedRng(moddedRng);
+        _safeMint(dogOwner, newTokenId);
+        //now we can set the respective tokenURI in some different ways. the one we'll be using is to call a function called setTokenUri() that instead of using the ERC721.sol,
+        //like we were using, uses an extension from the openzeppelin code called ERC721URIStorage.sol. We changed from importing the ERC721.sol to import the ERC721UIStorage.sol,
+        //and in this new code we dont create our own tokenURI function() (ERC721 we create this tokenURI() ourselves), but we call a new function called setTokenUri().
+        //patrick says tho that setTokenURI() isn't the most gas efficient operation. we are using it because it does have the most customization.
+        //patrick says we could also create a mapping between the dog breed and the token URI and have it refleted in tokenURI(), instead of using ERC721UIStorage.sol.
+        _setTokenURI(newTokenId, s_dogTokenUris[uint256(dogBreed)]);
+        //super inteligent way to add the index of the dogBreed we wanted: we did uint256(dogBreed) which returns 0, 1 or 2.
+    }
+
+    function getBreedFromModdedRng(uint256 moddedRng) public pure returns (Breed) {
+        uint256 cumulativeSum = 0;
+        uint256[3] memory chanceArray = getChanceArray();
+        for (uint256 i = 0; i < chanceArray.length; i++) {
+            if (moddedRng >= cumulativeSum && moddedRng < cumulativeSum + chanceArray[i]) {
+                return Breed(i);
+                //nice how we can call enums with the index aswell
+            }
+            cumulativeSum += chanceArray[i];
+        }
+        revert RandomIpfsNft__RangeOutOfBounds(); //if for some weird reason you dont return anything after the 3 loops, revert
+    }
+
+    function getChanceArray() public pure returns (uint256[3] memory) {
+        //array of uint256 of size 3 in memory
+        return [10, 30, MAX_CHANCE_VALUE];
+    }
+
+    function tokenURI(uint256) public view override returns (string memory) {}
 }
+//21:19m
