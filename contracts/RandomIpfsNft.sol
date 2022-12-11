@@ -7,7 +7,7 @@ import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 //we were importing ERC720.sol before but in order to set the tokenURI this way, we decided to use an extension of the ERC721 (which inherits ERC721.sol)
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/access/Ownable.sol"; // I won't want to use this in the future I think to create the onlyOwner() modifier, but i'll follow patrick for now
+import "@openzeppelin/contracts/access/Ownable.sol"; // I won't want to use this in the future I think to create the onlyOwner() modifier, but i'll follow patrick for now (we just using it for the onlyOwner() modifier but i'd rather create it by hand)
 
 error RandomIpfsNft__RangeOutOfBounds();
 error RandomIpfsNft__NeedMoreETHSent();
@@ -46,6 +46,10 @@ contract RandomIpfsNft is VRFConsumerBaseV2, ERC721URIStorage, Ownable {
     string[] internal s_dogTokenUris;
     uint256 internal immutable i_mintFee;
 
+    //Events
+    event NftRequested(uint256 indexed requestId, address requester);
+    event NftMinted(Breed dogBreed, address minter);
+
     constructor(
         address vrfCoordinatorV2,
         uint64 subscriptionId,
@@ -65,6 +69,7 @@ contract RandomIpfsNft is VRFConsumerBaseV2, ERC721URIStorage, Ownable {
 
     function requestNft() public payable returns (uint256 requestId) {
         if (msg.value < i_mintFee) {
+            //shouldnt it be (!msg.value == i_mintFee)? we dont want it to be >i_mintFee too
             revert RandomIpfsNft__NeedMoreETHSent();
         }
         requestId = i_vrfCoordinator.requestRandomWords(
@@ -77,6 +82,8 @@ contract RandomIpfsNft is VRFConsumerBaseV2, ERC721URIStorage, Ownable {
         s_requestIdToSender[requestId] = msg.sender;
         //the thing here is that fulfillRandomWords() will be where the nfts will be minted, so we have to have a way to know the address of who's calling requestNft().
         //we'll do that with a mapping of requestId -> address, so that in fulfillRandomWords() when it receives a requestId, we can query the address of who requested it.
+
+        emit NftRequested(requestId, msg.sender);
     }
 
     function fulfillRandomWords(
@@ -102,6 +109,8 @@ contract RandomIpfsNft is VRFConsumerBaseV2, ERC721URIStorage, Ownable {
         _setTokenURI(newTokenId, s_dogTokenUris[uint256(dogBreed)]);
         //super inteligent way to add the index of the dogBreed we wanted: we did uint256(dogBreed) which returns 0, 1 or 2.
         //because we can either call enums by Breed.PUG or Breed(0), by its name or by its index.
+
+        emit NftMinted(dogBreed, dogOwner);
     }
 
     function withdraw() public onlyOwner {
@@ -144,4 +153,4 @@ contract RandomIpfsNft is VRFConsumerBaseV2, ERC721URIStorage, Ownable {
         return s_tokenCounter;
     }
 }
-//21:19m
+//21:24m
