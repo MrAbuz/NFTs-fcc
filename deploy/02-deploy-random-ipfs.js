@@ -6,6 +6,12 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     const { deploy, log } = deployments
     const { deployer } = await getNamedAccounts()
     const chainId = network.config.chainId
+    let tokenUris
+
+    // get the IPFS hashes of our images
+    if (process.env.UPLOAD_TO_PINATA == "true") {
+        tokenUris = await handleTokenUris()
+    }
 
     let vrfCoordinatorV2Address, subscriptionId
 
@@ -33,3 +39,13 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
         networkConfig[chainId].mintFee,
     ]
 }
+
+async function handleTokenUris() {
+    tokenUris = []
+    //store the image in IPFS
+    //store the metadata in IPFS
+
+    return tokenUris
+}
+
+//Missing: add mock solidity file and add networkConfig to the helper-hardhat-config require?
