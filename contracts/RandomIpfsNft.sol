@@ -69,7 +69,7 @@ contract RandomIpfsNft is VRFConsumerBaseV2, ERC721URIStorage, Ownable {
 
     function requestNft() public payable returns (uint256 requestId) {
         if (msg.value < i_mintFee) {
-            //shouldnt it be (!msg.value == i_mintFee)? we dont want it to be >i_mintFee too
+            //shouldnt it be (!msg.value == i_mintFee)? we dont want it to be > i_mintFee too
             revert RandomIpfsNft__NeedMoreETHSent();
         }
         requestId = i_vrfCoordinator.requestRandomWords(
@@ -100,6 +100,7 @@ contract RandomIpfsNft is VRFConsumerBaseV2, ERC721URIStorage, Ownable {
         //this will produce a number between 0-99, so since it includes the 0, the 10% should be between 0-9, the 30% should be 10-39, and 60% between 40-99
 
         Breed dogBreed = getBreedFromModdedRng(moddedRng);
+        s_tokenCounter += s_tokenCounter;
         _safeMint(dogOwner, newTokenId);
         //now we can set the respective tokenURI in some different ways. the one we'll be using is to call a function called setTokenUri() that instead of using the ERC721.sol,
         //like we were using, uses an extension from the openzeppelin code called ERC721URIStorage.sol. We changed from importing the ERC721.sol to import the ERC721UIStorage.sol,
@@ -153,4 +154,3 @@ contract RandomIpfsNft is VRFConsumerBaseV2, ERC721URIStorage, Ownable {
         return s_tokenCounter;
     }
 }
-//21:24m
