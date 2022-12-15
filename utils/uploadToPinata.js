@@ -1,5 +1,5 @@
-//this is where we'll add our code to upload to Pinata
-//Pinata is a centralized service that we're gonna use to pin the data for us.
+//Pinata is a centralized service that we're gonna use to pin the data for us, and upload to IPFS.
+//Now we'll store the nft data both in our IPFS node and in Pinata's node, so that if our computer/server goes down we have atleast somebody else pinning it.
 //We could also use nft.storage which is the decentralized version (patrick showed us the code), check excel
 
 const pinataSDK = require("@pinata/sdk") //yarn add --dev @pinata/sdk
@@ -32,6 +32,14 @@ async function storeImages(imagesFilePath) {
     return { responses, files }
 }
 
-async function storeTokenUriMetadata(metadata) {}
+async function storeTokenUriMetadata(metadata) {
+    try {
+        const response = await pinata.pinJSONToIPFS(metadata)
+        return response
+    } catch (error) {
+        console.log(error)
+    }
+    return null
+}
 
-module.exports = { storeImages }
+module.exports = { storeImages, storeTokenUriMetadata }
