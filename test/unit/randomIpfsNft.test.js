@@ -32,17 +32,24 @@ const { assert, expect } = require("chai")
           })
 
           describe("requestNft", () => {
-              it("Reverts isn't sent with the request", async () => {
+              it("Reverts if payment isn't sent with the request", async () => {
                   await expect(randomIpfsNft.requestNft()).to.be.revertedWith(
-                      "RandomIpfsNft__NeedMoreETHSent"
+                      "RandomIpfsNft__WrongAmountETHSent"
                   )
               })
 
-              it("Reverts if payment amount is less than the mint fee", async () => {
+              it("Reverts if payment amount is lower than the mint fee", async () => {
                   const value = ethers.utils.parseEther("0.001")
                   await expect(
                       randomIpfsNft.requestNft({ value: mintFee.sub(value) })
-                  ).to.be.revertedWith("RandomIpfsNft__NeedMoreETHSent")
+                  ).to.be.revertedWith("RandomIpfsNft__WrongAmountETHSent")
+              })
+
+              it("Reverts if payment amount is higher than the mint fee", async () => {
+                  const value = ethers.utils.parseEther("0.001")
+                  await expect(
+                      randomIpfsNft.requestNft({ value: mintFee.add(value) })
+                  ).to.be.revertedWith("RandomIpfsNft__WrongAmountETHSent")
               })
 
               it("Calls the requestRandomWords function properly", async () => {
@@ -122,16 +129,18 @@ const { assert, expect } = require("chai")
               })
           })
           describe("withdraw", () => {
-              it("lets the owner withdraw the total amount of ETH in the contract", async function () {
+              it("reverts if it's not the owner withdrawing; and lets the owner withdraw the total amount of ETH in the contract", async function () {
                   await new Promise(async (resolve, reject) => {
                       randomIpfsNft.once("NftMinted", async () => {
                           console.log("Found the event!")
                           try {
                               //it reverts if it's not the owner trying to withdraw
-                              //const randomIpfsNftTwo = await randomIpfsNft.connect(accounts[2])
-                              //await expect(deployerTwo.withdraw()).to.be.reverted()
-                              //const txtx = await deployerTwo.withdraw()
-                              //assert(txtx)
+                              //this was giving me a lot of problems and the reason was I was trying to .connect(accounts[1]) and we we need to create a variable cuz prob [] inside () assumes its some parentheses
+                              const attacker = accounts[1]
+                              const ConnectedContract = await randomIpfsNft.connect(attacker)
+                              await expect(ConnectedContract.withdraw()).to.be.revertedWith(
+                                  "RandomIpfsNft__NotOwner"
+                              )
 
                               //owner can withdraw and withdraws the entire amount of ETH
                               const balanceBeforeWithdraw = await deployer.getBalance()
@@ -139,6 +148,7 @@ const { assert, expect } = require("chai")
                               const balanceAfterWithdraw = await deployer.getBalance()
                               assert(balanceAfterWithdraw > balanceBeforeWithdraw)
 
+                              //only thing I couldnt do was this, need to check how to add the gas costs of calling withdraw(), I've done that before
                               //assert.equal(
                               //    balanceAfterWithdraw.toString(),
                               //    balanceBeforeWithdraw.add(mintFee).toString()
@@ -177,8 +187,10 @@ const { assert, expect } = require("chai")
                   const stBernard = await randomIpfsNft.getBreedFromModdedRng(40)
                   assert.equal(stBernard, 2)
               })
+              it("It reverts if moddedRng >= 100", async function () {
+                  await expect(randomIpfsNft.getBreedFromModdedRng(100)).to.be.revertedWith(
+                      "RandomIpfsNft__RangeOutOfBounds"
+                  )
+              })
           })
       })
-
-//token counter is a get, good to know when/if we mint
-//mapping requestId => addresses public

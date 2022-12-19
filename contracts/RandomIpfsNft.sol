@@ -7,11 +7,14 @@ import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 //we were importing ERC720.sol before but in order to set the tokenURI this way, we decided to use an extension of the ERC721 (which inherits ERC721.sol)
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/access/Ownable.sol"; // I won't want to use this in the future I think to create the onlyOwner() modifier, but i'll follow patrick for now (we just using it for the onlyOwner() modifier but i'd rather create it by hand)
+//import "@openzeppelin/contracts/access/Ownable.sol";
+//Patrick used this import to create the onlyOwner() modifier: I didnt want to use it but was just following here. But it also started giving problems in the tests.
+//Since this is such an important part of security, i'd rather just create my own onlyOwner() modifier and stick to simplicity. Thus, I'm not importing nor inheriting this Ownable.sol for it.
 
 error RandomIpfsNft__RangeOutOfBounds();
-error RandomIpfsNft__NeedMoreETHSent();
+error RandomIpfsNft__WrongAmountETHSent();
 error RandomIpfsNft__TransferFailed();
+error RandomIpfsNft__NotOwner();
 
 //Plan:
 //when we mint an NFT, we will trigger a Chainlink VRF call to get us a random number
@@ -19,7 +22,7 @@ error RandomIpfsNft__TransferFailed();
 //users have to pay to mint an NFT
 //the owner of the contract can withdraw the ETH
 
-contract RandomIpfsNft is VRFConsumerBaseV2, ERC721URIStorage, Ownable {
+contract RandomIpfsNft is VRFConsumerBaseV2, ERC721URIStorage {
     //when we add a new inherited contract, remember to look at its constructor to add it to our constructor
 
     //Type Declaration
@@ -37,6 +40,8 @@ contract RandomIpfsNft is VRFConsumerBaseV2, ERC721URIStorage, Ownable {
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
 
+    address private immutable i_owner;
+
     // VRF Helpers
     mapping(uint256 => address) public s_requestIdToSender; //we should make it private but we'll make it public
 
@@ -50,6 +55,14 @@ contract RandomIpfsNft is VRFConsumerBaseV2, ERC721URIStorage, Ownable {
     event NftRequested(uint256 indexed requestId, address requester);
     event NftMinted(Breed dogBreed, address minter);
 
+    //Modifiers
+    modifier onlyOwner() {
+        if (msg.sender != i_owner) revert RandomIpfsNft__NotOwner();
+        _;
+    }
+
+    //Functions (order: constructor -> receive -> fallback -> external -> public -> internal -> private -> view/pure)
+
     constructor(
         address vrfCoordinatorV2,
         uint64 subscriptionId,
@@ -59,6 +72,7 @@ contract RandomIpfsNft is VRFConsumerBaseV2, ERC721URIStorage, Ownable {
         uint256 mintFee
     ) VRFConsumerBaseV2(vrfCoordinatorV2) ERC721("Random IPFS NFT", "RIN") {
         //even tho we are inheriting ERC721URIStorage,we initiate ERC721 in the constructor bcuz ERC721URIStorage is inheriting ERC721 which is the one that needs to be initiated.
+        i_owner = msg.sender;
         i_vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinatorV2);
         i_subscriptionId = subscriptionId;
         i_gasLane = gasLane;
@@ -68,9 +82,9 @@ contract RandomIpfsNft is VRFConsumerBaseV2, ERC721URIStorage, Ownable {
     }
 
     function requestNft() public payable returns (uint256 requestId) {
-        if (msg.value < i_mintFee) {
-            //shouldnt it be (!msg.value == i_mintFee)? we dont want it to be > i_mintFee too
-            revert RandomIpfsNft__NeedMoreETHSent();
+        if (msg.value != i_mintFee) {
+            //patrick had "if (msg.value < i_mintFee) {"" but imo it's like this because if the user sends > i_mintFee the money would be trapped and he wouldnt get any benefit.
+            revert RandomIpfsNft__WrongAmountETHSent();
         }
         requestId = i_vrfCoordinator.requestRandomWords(
             i_gasLane,
@@ -117,7 +131,7 @@ contract RandomIpfsNft is VRFConsumerBaseV2, ERC721URIStorage, Ownable {
     function withdraw() public onlyOwner {
         //onlyOwner modifier cuz we inherited an openzeppelin access contract for it, but I think I prefer to create my own
         uint256 amount = address(this).balance;
-        (bool success, ) = payable(msg.sender).call{value: amount}("");
+        (bool success, ) = payable(i_owner).call{value: amount}("");
         if (!success) {
             revert RandomIpfsNft__TransferFailed();
         }
