@@ -56,6 +56,7 @@ contract RandomIpfsNft is VRFConsumerBaseV2, ERC721URIStorage {
     event NftMinted(Breed dogBreed, address minter);
 
     //Modifiers
+    //Double check this onlyOwner() code in other source as this is super important, its according to fundme.sol. Tests are okay but nothing wrong in double checking
     modifier onlyOwner() {
         if (msg.sender != i_owner) revert RandomIpfsNft__NotOwner();
         _;
