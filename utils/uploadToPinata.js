@@ -1,6 +1,7 @@
 //Pinata is a centralized service that we're gonna use to either pin the data for us, and upload to IPFS.
 //Now we'll store the nft data both in our IPFS node and in Pinata's node, so that if our computer/server goes down we have atleast somebody else pinning it.
 //We could also use nft.storage which is the decentralized version (patrick showed us the code), check excel
+//There's also ways to programatically pin data to IPFS on our own node that I can learn later, but since most of us wont be running our computer 24/7, we're sticking with Pinata as our default.
 
 const pinataSDK = require("@pinata/sdk") //yarn add --dev @pinata/sdk. had to install an earlier version, check excel
 const path = require("path") //we also installed a "path" package to help us work with paths. basically to point a path like "images/randomNFT". yarn add --dev path
