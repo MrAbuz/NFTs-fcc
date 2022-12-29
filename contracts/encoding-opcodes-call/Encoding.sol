@@ -76,7 +76,7 @@ contract Encoding {
     }
 
     function decodeString() public pure returns (string memory) {
-        //we can also decode stuff, choosing the type that we want to decode into
+        //we can also decode stuff, choosing the type that we want to decode into (in this case to a string)
         string memory someString = abi.decode(encodeString(), (string));
         return someString;
         //this returns: some string
@@ -95,19 +95,21 @@ contract Encoding {
             (string, string)
         );
         return (someString, someOtherString);
-        //this returns: some string, it's bigger!
+        //this returns: some string
+        //              it's bigger!
     }
 
     function multiEncodePacked() public pure returns (bytes memory) {
         //we can even multi encode using the encodepacked
         bytes memory someString = abi.encodePacked("some string ", "it's bigger!");
         return someString;
+        //this returns: 0x736f6d6520737472696e6720697427732062696767657221
     }
 
-    //this doesn't work,
-    //the decoding doesn't work because it's the packed encoding of the two strings
+    //this doesn't work
+    //we cant decode something that we encode packed
+    //doesn't work because it's from the packed encoded bytes of the two strings
     function multiDecodePacked() public pure returns (string memory) {
-        //think patrick should've added two variables to the return cuz its multi decode but it wouldnt work anyway since its packed encoding
         string memory someString = abi.decode(multiEncodePacked(), (string));
         return someString;
         //this gives an error
@@ -120,17 +122,42 @@ contract Encoding {
         //this returns: some string it's bigger!
     }
 
-    //Easy to understand all of this
+    // Since with encoding we get the binary, we can use this encoding stuff to make calls to functions where we populate the data field with our function call code.
+    // With the exact function we wanna call in the binary format
+    // "But why would we do that? I can always just use the interface, the abi etc"
+    // -> Answer: maybe we dont have that, maybe all we have is the function name, or the parameters we wanna send,
+    // or maybe we wanna make our code be able to send arbitrary functions or make arbitrary calls, or do random really advanced stuff
 
-    //Since with encoding we get the binary, we can use this encoding stuff to make calls to functions where we populate the data thing with our function call code.
-    //With the exact function we wanna call in the binary format
-    //"But why would we do that? I can always just use the interface, the abi etc"
-    //-> answer: maybe we dont have that, maybe all we have is the function name, or the parameters we wanna send,
-    //or maybe we wanna make our code be able to send arbitrary functions or make arbitrary calls, or do random really advanced stuff
+    // Remember how before I said you always need two things to call a contract:
+    // 1. ABI
+    // 2. Contract Address?
+    // Well... That was true, but you don't need that massive ABI file. All we need to know is how to create the binary to call the functions that we want to call.
+
+    // Solidity has some more "low-level" keywords, namely "staticcall" and "call". We've used call in the past, but
+    // haven't really explained what was going on. There is also "send"... but basically forget about send.
+
+    // call: How we call functions to change the state of the blockchain.
+    // staticcall: This is how (at a low level) we do our "view" or "pure" function calls, and potentially don't change the blockchain state.
+
+    // Later on we'll learn another one called delegatecall, but let's not worry about that for now
+    // When you call a function, you are secretly calling "call" behind the scenes, with everything compiled down to the binary stuff for you.
+    // Flashback to when we withdrew ETH from our raffle:
+
+    function withdraw(address recentWinner) public {
+        (bool success, ) = recentWinner.call{value: address(this).balance}("");
+        require(success, "Transfer Failed");
+    }
+
+    // Remember this?
+    // - In our {} we are able to pass specific fields of a transaction, like value (also Gas Price and Gas Limit and probably more).
+    // - In our () we are able to pass data in order to call a specific function - but there was no function we wanted to call!
+    // We only sent ETH, so we didn't need to call a function!
+    // If we want to call a function, or send any data, we'd do it in these parathesis!
+
+    // Let's now learn how we can populate the data field and call any function and do essentially what the blockchain is gonna do at the low level
+    // Let's look at another contract to explain this more...
 }
 
 // https://docs.soliditylang.org/en/latest/cheatsheet.html
 
 // 22:20:04 starts explaining about abi, bin etc
-
-//22:41:40
