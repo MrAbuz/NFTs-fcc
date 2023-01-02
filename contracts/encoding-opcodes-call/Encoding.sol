@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.7;
 
+//we tried this in remix
+
 contract Encoding {
     function combineStrings() public pure returns (string memory) {
         //abi.encodePacked returns a bytes object, and we're typecasting it by wrapping it in a string
@@ -149,7 +151,7 @@ contract Encoding {
     }
 
     // Remember this?
-    // - In our {} we are able to pass specific fields of a transaction, like value (also Gas Price and Gas Limit and probably more).
+    // - In our {} we are able to pass specific fields of a transaction, like value (also Gas Price and Gas Limit, and probably more).
     // - In our () we are able to pass data in order to call a specific function - but there was no function we wanted to call!
     // We only sent ETH, so we didn't need to call a function!
     // If we want to call a function, or send any data, we'd do it in these parathesis!
