@@ -214,7 +214,16 @@ contract CallFunctionWithoutContract {
 //to send arbitrary functions or make arbitrary calls, or do random really advanced stuff.
 
 //Now, doing this call stuff is considered low level stuff, and its a best practise to try to avoid it when we can, if we can import an interface its much better, because
-//you're gonna have the compiler by your side(?), you'll be able to see if your types are matching etc (gas is the same aswell?).
+//you're gonna have the compiler by your side(?), you'll be able to see if your types are matching etc (gas is the same aswell? from what I read with call costs less gas, need to confirm).
 //Usually doing this low level calls might spook some security auditors.
+
+//https://ethereum.stackexchange.com/questions/91826/why-are-there-two-methods-encoding-arguments-abi-encode-and-abi-encodepacked
+//From a comment from here:
+//Calling the function the regular way without being low level costs more gas but its safer. (like contract.function(123, 456))
+//Due to the fact that the EVM considers a call to a non-existing contract to always succeed, Solidity includes an extra check using the "extcodesize" opcode when performing external calls.
+//This ensures that the contract that is about to be called either actually exists (it contains code) or an exception is raised.
+//The low-level calls which operate on addresses rather than contract instances (i.e. .call(), .delegatecall(), .staticcall(), .send() and .transfer()) do not include this check,
+//which makes them cheaper in terms of gas but also less safe.
+//Interesting.
 
 //https://docs.soliditylang.org/en/latest/cheatsheet.html
