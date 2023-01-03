@@ -160,6 +160,6 @@ contract Encoding {
     // Let's look at another contract to explain this more...
 }
 
-// https://docs.soliditylang.org/en/latest/cheatsheet.html
-
 // 22:20:04 starts explaining about abi, bin etc
+
+// https://docs.soliditylang.org/en/latest/cheatsheet.html
