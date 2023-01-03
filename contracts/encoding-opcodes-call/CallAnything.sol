@@ -80,11 +80,15 @@ contract CallAnything {
         //             true
     }
 
+    //
+    //
     // Now, there's a bunch of different ways to get the function selector and we'll not code them out ourselves
     // There's a ton of reasons why you might wanna get the selector in different ways, and here's some of those ways.
     // We wont go over this function selector getting methods, but I copied from our github repo and they have a bunch of comments that explain what they're doing:
     // We have seen getSelectorOne(), and we'll see from getSelectorTwo() to getSelectorFour().
     // Here are some of those other ways to get the function selector:
+    //
+    //
 
     // We can also get a function selector from data sent into the call
     function getSelectorTwo() public view returns (bytes4 selector) {
@@ -110,8 +114,9 @@ contract CallAnything {
     // Another way to get data (hard coded)
     function getCallData() public view returns (bytes memory) {
         return abi.encodeWithSignature("transfer(address,uint256)", address(this), 123);
-        //Mine: This is to be used in getSelectorThree()
     }
+
+    //Mine: This is to be used in getSelectorThree()
 
     // Pass this:
     // 0xa9059cbb000000000000000000000000d7acd2a9fd159e69bb102a1ca21c9a3e3a5f771b000000000000000000000000000000000000000000000000000000000000007b
@@ -135,15 +140,21 @@ contract CallAnything {
     // Another way to get your selector with the "this" keyword
     function getSelectorFour() public pure returns (bytes4 selector) {
         return this.transfer.selector;
-        // Mine: So we type the function name (transfer) inside this."".selector and we get the selector?
-        //       Looks to be good if we already have the function declared
-        //       It returned: 0xa9059cbb
     }
+
+    // Mine: So we type the function name (transfer) inside this."".selector and we get the selector?
+    //       Looks to be good if we already have the function declared
+    //       It returned: 0xa9059cbb
 
     // Just a function that gets the signature
     function getSignatureOne() public pure returns (string memory) {
         return "transfer(address,uint256)";
     }
 }
+//
+//
+//TLDR: Basically from my analysis the getSelectorOne() requires us to know the function signature, the getSelectorTwo and Three requires us to know the data that was
+//      used to call that function before, and the getSelectorFour() probably requires us to have the function already declared.
+//
 
 //https://docs.soliditylang.org/en/latest/cheatsheet.html
