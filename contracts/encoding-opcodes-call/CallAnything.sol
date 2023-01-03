@@ -52,6 +52,7 @@ contract CallAnything {
         address someAddress,
         uint256 amount
     ) public returns (bytes4, bool) {
+        //using abi.encodeWithSelector
         (bool success, bytes memory returnData) = address(this).call(
             // getDataToCallTransfer(someAddress, amount)
             abi.encodeWithSelector(getSelectorOne(), someAddress, amount)
@@ -67,18 +68,82 @@ contract CallAnything {
         address someAddress,
         uint256 amount
     ) public returns (bytes4, bool) {
-        //we can also do encodeWithSignature instead
+        // we can also use abi.encodeWithSignature
         // "abi.encodeWithSignature(string memory signature, ...)" is equivalent to "abi.encodeWithSelector(bytes4(keccak256(bytes(signature)), ...)"
-        //basically turns the signature into the selector for us
+        // basically turns the signature into the selector for us
+        // looks way easier
         (bool success, bytes memory returnData) = address(this).call(
             abi.encodeWithSignature("transfer(address,uint256)", someAddress, amount)
         );
         return (bytes4(returnData), success);
+        // it returned 0x00000000
+        //             true
     }
 
-    // Now, there's a bunch of different ways to get the selector and we'll not code this out ourselves
-    // There's a ton of reasons why you might wanna get the selector in a different way, and here's some
-    // We didn't go over this next function selector getting methods, but I copied from the github repo and they have a bunch of comments that explain what they're doing:
+    // Now, there's a bunch of different ways to get the function selector and we'll not code them out ourselves
+    // There's a ton of reasons why you might wanna get the selector in different ways, and here's some of those ways.
+    // We wont go over this function selector getting methods, but I copied from our github repo and they have a bunch of comments that explain what they're doing:
+    // We have seen getSelectorOne(), and we'll see from getSelectorTwo() to getSelectorFour().
+    // Here are some of those other ways to get the function selector:
+
+    // We can also get a function selector from data sent into the call
+    function getSelectorTwo() public view returns (bytes4 selector) {
+        bytes memory functionCallData = abi.encodeWithSignature(
+            "transfer(address,uint256)",
+            address(this),
+            123
+        );
+        selector = bytes4(
+            bytes.concat(
+                functionCallData[0],
+                functionCallData[1],
+                functionCallData[2],
+                functionCallData[3]
+            )
+        );
+        //Mine: This is easy to understand. The functionCallData is the encoded data to call transfer(), and as I've seen above in the results from getSelectorOne()
+        //      and getDataToCallTransfer(), that bytes data starts with the function selector. Here we are extracting those first 4 bytes and concatenating them
+        //      bytes.concat() as its explained in the beginning of Encoding.sol is a way we can use to concatenate.
+        //      It returned:  0xa9059cbb
+    }
+
+    // Another way to get data (hard coded)
+    function getCallData() public view returns (bytes memory) {
+        return abi.encodeWithSignature("transfer(address,uint256)", address(this), 123);
+        //Mine: This is to be used in getSelectorThree()
+    }
+
+    // Pass this:
+    // 0xa9059cbb000000000000000000000000d7acd2a9fd159e69bb102a1ca21c9a3e3a5f771b000000000000000000000000000000000000000000000000000000000000007b
+    // This is the output of `getCallData()`
+    // This is another low level way to get function selector using assembly
+    // You can actually write code that resembles the opcodes using the assembly keyword!
+    // This in-line assembly is called "Yul"
+    // It's a best practice to use it as little as possible - only when you need to do something very VERY specific
+    function getSelectorThree(
+        bytes calldata functionCallData
+    ) public pure returns (bytes4 selector) {
+        // offset is a special attribute of calldata
+        assembly {
+            selector := calldataload(functionCallData.offset)
+        }
+        // Mine: In yul ":=" means "=". calldataload is the name of an opcode.
+        //       This looks to fit the same purpose as getSelectorTwo() as you also need the data sent into the call to extract the selector.
+        //       It returned: 0xa9059cbb
+    }
+
+    // Another way to get your selector with the "this" keyword
+    function getSelectorFour() public pure returns (bytes4 selector) {
+        return this.transfer.selector;
+        // Mine: So we type the function name (transfer) inside this."".selector and we get the selector?
+        //       Looks to be good if we already have the function declared
+        //       It returned: 0xa9059cbb
+    }
+
+    // Just a function that gets the signature
+    function getSignatureOne() public pure returns (string memory) {
+        return "transfer(address,uint256)";
+    }
 }
 
 //https://docs.soliditylang.org/en/latest/cheatsheet.html
