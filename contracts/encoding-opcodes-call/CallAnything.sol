@@ -149,17 +149,13 @@ contract CallAnything {
     //       It returned: 0xa9059cbb
 
     // -----------------------------------------------------------------------------------------------------------------------------------------------------------
-    // Just a function that gets the signature (why is this here?)
-    function getSignatureOne() public pure returns (string memory) {
-        return "transfer(address,uint256)";
-    }
     //
     // TLDR: Basically from my analysis the getSelectorOne() requires us to know the function signature, the getSelectorTwo and Three requires us to know the data that was
-    //      used to call that function before, and the getSelectorFour() probably requires us to have the function already declared. We can also just get the call data
-    //      from just the signature using encodeWithSignature.
+    //      used to call that function before, and the getSelectorFour() probably requires us to have the function already declared. Probably the way is We can just get the
+    //      call data from the signature using encodeWithSignature, but prob if we dont have it, we get the selector from this/other ways.
 }
 
-// -----------------------------------------------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 //
 //Now we're gonna see how 2 contracts can interact with eachother without actually having all of the code for each contract:
 
@@ -179,7 +175,7 @@ contract CallFunctionWithoutContract {
         return (bytes4(returnData), success);
         // Mine: Things to note: "calldata" being used instead of memory, nice.
         //       Here we're calling the getSelectorThree() function, with callData as the input parameter because its the input parameter it should receive.
-        //       Nothing special.
+        //       Nothing special, just calling from a different contract.
     }
 
     // with a staticcall, we can have this be a view function!
@@ -194,6 +190,7 @@ contract CallFunctionWithoutContract {
         // Mine: Static call as a way to make calls that dont change the state, like "view" or "pure" function calls.
         //       getSelectorOne() is the signature
         //       Used encodeWithSignature() without parameters, because the function we're calling doesnt have parameters.
+        //       Seems that we can just use encodeWithSignature() or encodeWithSelector() without any arguments.
     }
 
     function callTransferFunctionDirectlyThree(
@@ -207,6 +204,22 @@ contract CallFunctionWithoutContract {
 
         // Mine: Nothing new, just calling this from a different contract.
     }
+
+    // -----------------------------------------------------------------------------------------------------------------------------------------------------------
+    // Created by me for fun.
+    // Receives the call data previously used to call a function and the address of the contract, and calls that function with new argument values.
+    function mine(
+        address someAddress,
+        uint256 amount,
+        bytes calldata callData,
+        address targetAddress
+    ) public returns (bytes4, bool) {
+        bytes4 selector = bytes4(bytes.concat(callData[0], callData[1], callData[2], callData[3]));
+        (bool success, bytes memory returnData) = targetAddress.call(
+            abi.encodeWithSelector(selector, someAddress, amount)
+        );
+        return (bytes4(returnData), success);
+    }
 }
 
 //This looks to be a really nice way to call other functions from other contracts if we don't have the ABI, or other reasons.
@@ -214,8 +227,9 @@ contract CallFunctionWithoutContract {
 //to send arbitrary functions or make arbitrary calls, or do random really advanced stuff.
 
 //Now, doing this call stuff is considered low level stuff, and its a best practise to try to avoid it when we can, if we can import an interface its much better, because
-//you're gonna have the compiler by your side(?), you'll be able to see if your types are matching etc (gas is the same aswell? from what I read with call costs less gas, need to confirm).
-//Usually doing this low level calls might spook some security auditors.
+//you're gonna have the compiler by your side (guess this means the compiler throws error if something's wrong), you'll be able to see if your types are matching etc (gas is the same
+//aswell? from what I read with call costs less gas, need to confirm).
+//Usually doing this low level calls might spook some security auditors a little bit.
 
 //https://ethereum.stackexchange.com/questions/91826/why-are-there-two-methods-encoding-arguments-abi-encode-and-abi-encodepacked
 //From a comment from here:
