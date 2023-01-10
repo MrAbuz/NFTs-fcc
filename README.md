@@ -17,3 +17,5 @@
      - If price of ETH is above X -> Happy face
      - If price of ETH is below X -> Sad face
 
+     (am I able to actually create the svg based on variables changing, or do we need to have all the possible svgs already built?)
+

@@ -8,7 +8,7 @@ import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 //we were importing ERC720.sol before but in order to set the tokenURI this way, we decided to use an extension of the ERC721 (which inherits ERC721.sol)
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 //import "@openzeppelin/contracts/access/Ownable.sol";
-//Patrick used this import to create the onlyOwner() modifier: I didnt want to use it but was just following here. But it also started giving problems in the tests.
+//Patrick imported this Ownable.sol to create the onlyOwner() modifier: I didnt want to use it but was just following here. But it also started giving problems in the tests.
 //Since this is such an important part of security, i'd rather just create my own onlyOwner() modifier and stick to simplicity. Thus, I'm not importing nor inheriting this Ownable.sol for it.
 
 error RandomIpfsNft__RangeOutOfBounds();
@@ -23,7 +23,7 @@ error RandomIpfsNft__NotOwner();
 //the owner of the contract can withdraw the ETH
 
 contract RandomIpfsNft is VRFConsumerBaseV2, ERC721URIStorage {
-    //when we add a new inherited contract, remember to look at its constructor to add it to our constructor
+    //when we add a new inherited contract, remember to look at its constructor to add it to our constructor (even of the contracts that are inherited by the contract we inherited like ERC721.sol)
 
     //Type Declaration
     enum Breed {
@@ -56,7 +56,7 @@ contract RandomIpfsNft is VRFConsumerBaseV2, ERC721URIStorage {
     event NftMinted(Breed dogBreed, address minter);
 
     //Modifiers
-    //Double check this onlyOwner() code in other source as this is super important, its according to fundme.sol. Tests are okay but nothing wrong in double checking
+    //Double check this onlyOwner() code from other sources as this is super important, this is according to fundme.sol. Tests are okay but nothing wrong in double checking
     modifier onlyOwner() {
         if (msg.sender != i_owner) revert RandomIpfsNft__NotOwner();
         _;
@@ -84,7 +84,7 @@ contract RandomIpfsNft is VRFConsumerBaseV2, ERC721URIStorage {
 
     function requestNft() public payable returns (uint256 requestId) {
         if (msg.value != i_mintFee) {
-            //patrick had "if (msg.value < i_mintFee) {"" but imo it's like this because if the user sends > i_mintFee the money would be trapped and he wouldnt get any benefit.
+            //patrick had "if (msg.value < i_mintFee) {"" but imo this is better because if the user sends > i_mintFee the money would be trapped and he wouldnt get any benefit.
             revert RandomIpfsNft__WrongAmountETHSent();
         }
         requestId = i_vrfCoordinator.requestRandomWords(
@@ -130,7 +130,6 @@ contract RandomIpfsNft is VRFConsumerBaseV2, ERC721URIStorage {
     }
 
     function withdraw() public onlyOwner {
-        //onlyOwner modifier cuz we inherited an openzeppelin access contract for it, but I think I prefer to create my own
         uint256 amount = address(this).balance;
         (bool success, ) = payable(i_owner).call{value: amount}("");
         if (!success) {
@@ -148,7 +147,7 @@ contract RandomIpfsNft is VRFConsumerBaseV2, ERC721URIStorage {
             }
             cumulativeSum = chanceArray[i];
         }
-        revert RandomIpfsNft__RangeOutOfBounds(); //if for some weird reason you dont return anything after the 3 loops, revert
+        revert RandomIpfsNft__RangeOutOfBounds(); //if for some weird reason you dont return anything after the 3 loops, revert.
     }
 
     function getChanceArray() public pure returns (uint256[3] memory) {

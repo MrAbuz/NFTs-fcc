@@ -228,7 +228,7 @@ contract CallFunctionWithoutContract {
 
 //Now, doing this call stuff is considered low level stuff, and its a best practise to try to avoid it when we can, if we can import an interface its much better, because
 //you're gonna have the compiler by your side (guess this means the compiler throws error if something's wrong), you'll be able to see if your types are matching etc (gas is the same
-//aswell? from what I read with call costs less gas, need to confirm).
+//aswell? from what I've read with call costs less gas, need to confirm).
 //Usually doing this low level calls might spook some security auditors a little bit.
 
 //https://ethereum.stackexchange.com/questions/91826/why-are-there-two-methods-encoding-arguments-abi-encode-and-abi-encodepacked
