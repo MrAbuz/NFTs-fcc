@@ -17,7 +17,7 @@ contract DynamicSvgNft is ERC721 {
     string private i_lowImageURI; //*
     string private i_highImageURI;
     AggregatorV3Interface internal immutable i_priceFeed;
-    mapping(uint256 => int256) public s_tokenIdToHighValue; //shouldnt be public
+    mapping(uint256 => int256) public s_tokenIdToHighValue; //shouldnt be public. tokenId to eth price that the user wants his nft to change its happiness
 
     event CreatedNFT(uint256 indexed tokenId, int256 highValue);
 
@@ -32,6 +32,32 @@ contract DynamicSvgNft is ERC721 {
         i_highImageURI = svgToImageURI(highSvg);
         i_priceFeed = AggregatorV3Interface(priceFeedAddress);
     }
+
+    // function setLowURI(string memory svgLowURI) public onlyOwner { //should change i_lowImageURI to s_
+    //     s_lowImageURI = svgLowURI;
+    // }
+
+    // function setHighURI(string memory svgHighURI) public onlyOwner {
+    //     s_highImageURI = svgHighURI;
+    // }
+
+    // function setLowSVG(string memory svgLowRaw) public onlyOwner {
+    //     string memory svgURI = svgToImageURI(svgLowRaw);
+    //     setLowURI(svgURI);
+    // }
+
+    // function setHighSVG(string memory svgHighRaw) public onlyOwner {
+    //     string memory svgURI = svgToImageURI(svgHighRaw);
+    //     setHighURI(svgURI);
+    // }
+
+    // function userChangeETHPrice(int256 ethPrice, uint256 tokenId) external { funny one I did for the user to be able to change the eth price after minting
+    // add error DynamicSvgNft__userIsntTheOwner();
+    //    if (balanceOf(msg.sender) == 0 || ownerOf(tokenId) != msg.sender) {
+    //        revert DynamicSvgNft__userIsntTheOwner();
+    //    }
+    //    s_tokenIdToHighValue[tokenId] = ethPrice;
+    //}
 
     function svgToImageURI(string memory svg) public pure returns (string memory) {
         // (22:10:55) when I open the SVG image on github, there's a button right above the picture in the right that says: "Display the source blob". Clicking there will display the SVG code.
@@ -54,21 +80,21 @@ contract DynamicSvgNft is ERC721 {
         // we got in the off-chain way:
 
         string memory baseURL = "data:image/svg+xml;base64,";
-        string memory svgBase64Encoded = Base64.encode(bytes(string(abi.encodePacked(svg))));
+        string memory svgBase64Encoded = Base64.encode(bytes(string(abi.encodePacked(svg)))); //do we add string here cuz the svg might have weird symbols? cuz below in json base64.encode we didnt
         return string(abi.encodePacked(baseURL, svgBase64Encoded)); //could've also used string.concat(stringA, stringB) in 0.8.12 + I think
     }
 
     function mintNft(int256 highValue) public {
         //attention: isnt this wrong? the way we're updating the s_tokenCounter
-        s_tokenIdToHighValue[s_tokenCounter] = highValue; //we'll let the minters choose the eth price that they wanna use for their nft
         s_tokenCounter = s_tokenCounter + 1;
+        s_tokenIdToHighValue[s_tokenCounter] = highValue; //we'll let the minters choose the eth price that they wanna use for their nft
         _safeMint(msg.sender, s_tokenCounter);
         emit CreatedNFT(s_tokenCounter, highValue);
     }
 
     function _baseURI() internal pure override returns (string memory) {
         //ERC721.sol has a _baseURI() that we're gonna override with the prefix for the token URI (base64 json)
-        //nice, this is a empty function that they included if we need to add a prefix.
+        //nice, this is a empty function that they included in ERC721.sol if we need to add a prefix.
         //but as we're overriding tokenURI thus not using any of their configurations with _baseURI as far as I see, probably not worth the mess to use this but lets see
         return "data:application/json;base64,";
     }
@@ -80,19 +106,17 @@ contract DynamicSvgNft is ERC721 {
 
         require(_exists(tokenId), "URI Query for nonexistent token"); //should be an if with error but we're gonna go like this
 
-        //string memory imageURI = "hi!";
-
         (, int256 price, , , ) = i_priceFeed.latestRoundData();
         string memory imageURI = i_highImageURI;
 
-        if (price <= s_tokenIdToHighValue[tokenId]) {
+        if (price < s_tokenIdToHighValue[tokenId]) {
             imageURI = i_lowImageURI;
         }
 
         //basically the same thing we did above in svgToImageURI() to get the URI but here its all in the same line.
-        //abi.encodePacked(prefix (baseURI()), with the base64 encoded token URI)
+        //abi.encodePacked(prefix which is baseURI, with the base64 encoded json)
         //would probably be a lot easier to read if we typed it separated but its easy to understand
-        //data:image/svg+xml;base64, is the prefix for the Base64 svg image,
+        //data:image/svg+xml;base64, is the prefix for the Base64 svg image
         //But for base64 json we use:
         //data:application/json;base64,
 
@@ -110,7 +134,7 @@ contract DynamicSvgNft is ERC721 {
                                 imageURI,
                                 '"}'
                             )
-                            //we're gonna use single quotes (') here because inside the json we're gonna use some double quotes ("")
+                            //we used single quotes (') here because inside the json we used some double quotes ("")
                             //interesting the way to concatenate text with functions
                         )
                     )

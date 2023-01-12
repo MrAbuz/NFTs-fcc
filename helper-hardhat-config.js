@@ -19,13 +19,11 @@ const networkConfig = {
     },
 }
 
-const DECIMALS = "18"
-const INITIAL_PRICE = "200000000000000000000"
+//const DECIMALS = "18" //hardcoded both of this but should have all values coming from here
+//const INITIAL_PRICE = "200000000000000000000"
 const developmentChains = ["hardhat", "localhost"]
 
 module.exports = {
     networkConfig,
     developmentChains,
-    DECIMALS,
-    INITIAL_PRICE,
 }
