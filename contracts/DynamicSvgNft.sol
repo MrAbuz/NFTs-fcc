@@ -1,4 +1,3 @@
-//DynamicSvgNft.sol
 //SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.7;
@@ -7,17 +6,15 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "base64-sol/base64.sol"; //yarn add --dev base64-sol
 
-contract DynamicSvgNft is ERC721 {
-    // Plan:
-    // Mint
-    // Store our SVG information somewhere
-    // Some logic to say "Show X Image" or "Show Y Image"
+error ERC721Metadata__URI_QueryFor_NonExistentToken();
 
+contract DynamicSvgNft is ERC721 {
     uint256 private s_tokenCounter;
-    string private i_lowImageURI; //*
-    string private i_highImageURI;
-    AggregatorV3Interface internal immutable i_priceFeed;
-    mapping(uint256 => int256) public s_tokenIdToHighValue; //shouldnt be public. tokenId to eth price that the user wants his nft to change its happiness
+    string private s_lowImageURI;
+    string private s_highImageURI;
+
+    AggregatorV3Interface internal immutable i_priceFeed; //nice how this has to be internal I guess because its being used in an overriden function from an inherited contract
+    mapping(uint256 => int256) private s_tokenIdToHighValue; //tokenId to eth price that the user wants his nft to change its happiness
 
     event CreatedNFT(uint256 indexed tokenId, int256 highValue);
 
@@ -26,14 +23,15 @@ contract DynamicSvgNft is ERC721 {
         string memory lowSvg,
         string memory highSvg
     ) ERC721("Dynamic SVG NFT", "DSN") {
-        //we're passing in the svg code as input parameters
         s_tokenCounter = 0;
-        i_lowImageURI = svgToImageURI(lowSvg);
-        i_highImageURI = svgToImageURI(highSvg);
+        s_lowImageURI = svgToImageURI(lowSvg);
+        s_highImageURI = svgToImageURI(highSvg);
         i_priceFeed = AggregatorV3Interface(priceFeedAddress);
     }
 
-    // function setLowURI(string memory svgLowURI) public onlyOwner { //should change i_lowImageURI to s_
+    //Some functions to add some more functionality later on:
+
+    // function setLowURI(string memory svgLowURI) public onlyOwner { _
     //     s_lowImageURI = svgLowURI;
     // }
 
@@ -104,16 +102,18 @@ contract DynamicSvgNft is ERC721 {
         //Now we're gonna stick that image URI into a json with the metadata and base64 encode the json to get the token URI.
         //We'll override the tokenURI function of the ERC721
 
-        require(_exists(tokenId), "URI Query for nonexistent token"); //should be an if with error but we're gonna go like this
-
-        (, int256 price, , , ) = i_priceFeed.latestRoundData();
-        string memory imageURI = i_highImageURI;
-
-        if (price < s_tokenIdToHighValue[tokenId]) {
-            imageURI = i_lowImageURI;
+        if (!_exists(tokenId)) {
+            revert ERC721Metadata__URI_QueryFor_NonExistentToken();
         }
 
-        //basically the same thing we did above in svgToImageURI() to get the URI but here its all in the same line.
+        (, int256 price, , , ) = i_priceFeed.latestRoundData();
+        string memory imageURI = s_highImageURI;
+
+        if (price < s_tokenIdToHighValue[tokenId]) {
+            imageURI = s_lowImageURI;
+        }
+
+        //Now, basically the same thing we did above in svgToImageURI() to get the URI but here its all in the same line.
         //abi.encodePacked(prefix which is baseURI, with the base64 encoded json)
         //would probably be a lot easier to read if we typed it separated but its easy to understand
         //data:image/svg+xml;base64, is the prefix for the Base64 svg image
@@ -140,5 +140,21 @@ contract DynamicSvgNft is ERC721 {
                     )
                 )
             );
+    }
+
+    function getLowSVG() public view returns (string memory) {
+        return s_lowImageURI;
+    }
+
+    function getHighSVG() public view returns (string memory) {
+        return s_highImageURI;
+    }
+
+    function getPriceFeed() public view returns (AggregatorV3Interface) {
+        return i_priceFeed;
+    }
+
+    function getTokenCounter() public view returns (uint256) {
+        return s_tokenCounter;
     }
 }
