@@ -2,6 +2,9 @@ const { network, deployments, ethers } = require("hardhat")
 const { developmentChains } = require("../../helper-hardhat-config")
 const { assert } = require("chai")
 
+//Patrick: Ideally, only 1 assert per "it" block
+//                  and we check everything
+
 !developmentChains.includes(network.name)
     ? describe.skip
     : describe("Basic NFT Unit Tests", function () {

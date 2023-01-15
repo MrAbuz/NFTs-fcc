@@ -2,6 +2,9 @@ const { network, deployments, ethers } = require("hardhat")
 const { developmentChains, networkConfig } = require("../../helper-hardhat-config")
 const { assert, expect } = require("chai")
 
+//Patrick: Ideally, only 1 assert per "it" block
+//                  and we check everything
+
 !developmentChains.includes(network.name)
     ? describe.skip
     : describe("Dynamic SVG Unit tests", () => {
@@ -48,5 +51,24 @@ const { assert, expect } = require("chai")
                   assert(tokenCounterBefore < tokenCounterAfter)
                   assert.equal(tokenCounterAfter.toNumber(), tokenCounterBefore.add(1).toNumber())
               })
+              it("Mints the nft, proved by emiting the transfer event", async () => {
+                  await expect(dynamicSvgNft.mintNft(1400)).to.emit(dynamicSvgNft, "Transfer")
+              })
+              it("Mints the nft, proved by updating the owners mapping", async () => {
+                  await dynamicSvgNft.mintNft(1400)
+                  const owner = await dynamicSvgNft.ownerOf(0)
+                  assert.equal(owner, deployer.address)
+              })
+              it("Emits the CreatedNFT event", async () => {
+                  await expect(dynamicSvgNft.mintNft(1400)).to.emit(dynamicSvgNft, "CreatedNFT")
+              })
           })
       })
+
+//await expect(raffle.enterRaffle({ value: raffleEntranceFee })).to.emit(
+//    raffle,
+//    "RaffleEnter"
+// )
+
+//need to check line 88 after: mintnft()  "s_tokenIdToHighValue[tokenId] = highValue".
+//will be able to check it in tokenURI()
