@@ -135,7 +135,7 @@ contract DynamicSvgNft is ERC721 {
                                 '"}'
                             )
                             //we used single quotes (') here because inside the json we used some double quotes ("")
-                            //interesting the way to concatenate text with functions
+                            //interesting the way to concatenate text with functions, nice!
                         )
                     )
                 )
