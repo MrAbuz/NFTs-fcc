@@ -1,5 +1,5 @@
 const { network, deployments, ethers } = require("hardhat")
-const { developmentChains, networkConfig } = require("../../helper-hardhat-config")
+const { developmentChains } = require("../../helper-hardhat-config")
 const { assert, expect } = require("chai")
 
 //Patrick: Ideally, only 1 assert per "it" block
@@ -52,15 +52,11 @@ let tokenFinalURISad = `data:application/json;base64,eyJuYW1lIjoiRHluYW1pYyBTVkc
               })
               it("The function svgToImage() produces the right base64 SVG Image URI for the low SVG", async () => {
                   const lowSVG = await dynamicSvgNft.getLowSVG()
-                  //assert(lowSVG.includes("data:image/svg+xml;base64,"))
-                  //assert(lowSVG.includes(tokenURIsad))
-                  assert(lowSVG.includes(sadImageURI))
+                  assert.equal(lowSVG, sadImageURI)
               })
               it("The function svgToImage() produces the right base64 SVG Image URI for the high SVG", async () => {
                   const highSVG = await dynamicSvgNft.getHighSVG()
-                  //assert(highSVG.includes("data:image/svg+xml;base64,"))
-                  //assert(highSVG.includes(tokenURIhappy))
-                  assert(highSVG.includes(happyImageURI))
+                  assert.equal(highSVG, happyImageURI)
               })
           })
 
@@ -68,26 +64,31 @@ let tokenFinalURISad = `data:application/json;base64,eyJuYW1lIjoiRHluYW1pYyBTVkc
               //proved "s_tokenIdToHighValue[tokenId] = highValue" in tokenURI()'s test because there's no way to call the mapping directly because its private
               it("Updates the token counter with +1 after mintNft() is called", async () => {
                   const tokenCounterBefore = await dynamicSvgNft.getTokenCounter()
-                  await dynamicSvgNft.mintNft(1400)
+                  const price = ethers.utils.parseEther("1400")
+                  await dynamicSvgNft.mintNft(price)
                   const tokenCounterAfter = await dynamicSvgNft.getTokenCounter()
                   assert(tokenCounterBefore < tokenCounterAfter)
                   assert.equal(tokenCounterAfter.toNumber(), tokenCounterBefore.add(1).toNumber())
               })
               it("Mints the nft, proved by emiting the transfer event", async () => {
-                  await expect(dynamicSvgNft.mintNft(1400)).to.emit(dynamicSvgNft, "Transfer")
+                  const price = ethers.utils.parseEther("1400")
+                  await expect(dynamicSvgNft.mintNft(price)).to.emit(dynamicSvgNft, "Transfer")
               })
               it("Mints the nft, proved by updating the owners mapping. Also proves the first line of mintNft()", async () => {
-                  await dynamicSvgNft.mintNft(1400)
+                  const price = ethers.utils.parseEther("1400")
+                  await dynamicSvgNft.mintNft(price)
                   const owner = await dynamicSvgNft.ownerOf(0)
                   assert.equal(owner, deployer.address)
               })
               it("Emits the CreatedNFT event", async () => {
-                  await expect(dynamicSvgNft.mintNft(1400)).to.emit(dynamicSvgNft, "CreatedNFT")
+                  const price = ethers.utils.parseEther("1400")
+                  await expect(dynamicSvgNft.mintNft(price)).to.emit(dynamicSvgNft, "CreatedNFT")
               })
           })
           describe("_baseURI() function", () => {
               it("tokenURI() returns a string with the prefix from _baseURI() included in the beginning", async () => {
-                  await dynamicSvgNft.mintNft(1500)
+                  const price = ethers.utils.parseEther("1400")
+                  await dynamicSvgNft.mintNft(price)
                   let tokenURI = await dynamicSvgNft.tokenURI(0)
                   assert(tokenURI.includes("data:application/json;base64,"))
               })
@@ -108,14 +109,18 @@ let tokenFinalURISad = `data:application/json;base64,eyJuYW1lIjoiRHluYW1pYyBTVkc
                   let price = ethers.utils.parseEther("1300")
                   await dynamicSvgNft.mintNft(price)
                   let tokenURI = await dynamicSvgNft.tokenURI(0)
-                  assert(tokenURI.includes(tokenFinalURIHappy))
+                  assert.equal(tokenURI, tokenFinalURIHappy)
               })
               it("Provides the sad tokenURI when the market price is lower than the price provided in mintNft", async () => {
                   //with this I also proved the line from mintnft() which states "s_tokenIdToHighValue[tokenId] = highValue". Can only be proved here due to the mapping being private
                   let price = ethers.utils.parseEther("1500")
                   await dynamicSvgNft.mintNft(price)
                   let tokenURI = await dynamicSvgNft.tokenURI(0)
-                  assert(tokenURI.includes(tokenFinalURISad))
+                  assert.equal(tokenURI, tokenFinalURISad)
               })
           })
       })
+
+// Patrick in his tests added in just 1 of his .mintNft() the .wait(1). Maybe I should aswell, probably in all my transactions, or not?
+//               const txResponse = await dynamicSvgNft.mintNft(highValue)
+//               await txResponse.wait(1)
