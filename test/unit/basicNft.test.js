@@ -3,7 +3,8 @@ const { developmentChains } = require("../../helper-hardhat-config")
 const { assert } = require("chai")
 
 //Patrick: Ideally, only 1 assert per "it" block
-//                  and we check everything
+//                  check everything
+//                  check the test coverage in the end to make sure its 100%
 
 !developmentChains.includes(network.name)
     ? describe.skip
